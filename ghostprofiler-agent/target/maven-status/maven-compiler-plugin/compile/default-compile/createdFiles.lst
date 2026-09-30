@@ -1,0 +1,16 @@
+com\ghostprofiler\agent\instrumentation\MethodInterceptor.class
+com\ghostprofiler\agent\instrumentation\JdbcInterceptor.class
+com\ghostprofiler\agent\instrumentation\MethodTimingTransformer$LoggingTransformListener.class
+com\ghostprofiler\agent\collector\CallTreeNode.class
+com\ghostprofiler\agent\server\MetricsHttpServer.class
+com\ghostprofiler\agent\server\MetricsJsonSerializer.class
+com\ghostprofiler\agent\collector\MetricsStore$MethodStats.class
+com\ghostprofiler\agent\collector\NPlusOneDetector.class
+com\ghostprofiler\agent\collector\NPlusOneDetector$NPlusOneWarning.class
+com\ghostprofiler\agent\instrumentation\MethodTimingTransformer.class
+com\ghostprofiler\agent\jvm\MemoryMonitor.class
+com\ghostprofiler\agent\jvm\GcMonitor$GcStats.class
+com\ghostprofiler\agent\AgentMain.class
+com\ghostprofiler\agent\jvm\GcMonitor.class
+com\ghostprofiler\agent\collector\MetricsStore.class
+com\ghostprofiler\agent\config\AgentConfig.class

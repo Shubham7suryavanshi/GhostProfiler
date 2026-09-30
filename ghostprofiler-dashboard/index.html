@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GhostProfiler Dashboard</title>
+    <meta name="description" content="Real-time JVM performance metrics from the GhostProfiler APM agent.">
+    <!--
+        GhostProfiler Dashboard — FR8 (stretch goal)
+        Plain HTML + Chart.js from CDN. No build tooling, no frameworks.
+        Polls GET /metrics every 2 seconds and renders the results.
+
+        STUB — Chart.js rendering and live data polling wired in step 10.
+    -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --bg:        #0d1117;
+            --surface:   #161b22;
+            --border:    #30363d;
+            --accent:    #58a6ff;
+            --accent2:   #3fb950;
+            --warn:      #f85149;
+            --text:      #e6edf3;
+            --text-muted:#8b949e;
+            --font:      'Segoe UI', system-ui, sans-serif;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font);
+            min-height: 100vh;
+            padding: 24px;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 28px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 16px;
+        }
+
+        header h1 { font-size: 1.5rem; color: var(--accent); }
+        header span { font-size: 0.85rem; color: var(--text-muted); }
+
+        .status-dot {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            background: var(--accent2);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.4; }
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .card h2 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .metric-sub { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
+
+        .chart-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .chart-card h2 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        th {
+            text-align: left;
+            color: var(--text-muted);
+            font-weight: 500;
+            padding: 6px 8px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        td { padding: 8px 8px; border-bottom: 1px solid var(--border); }
+
+        tr:last-child td { border-bottom: none; }
+
+        .warn-badge {
+            display: inline-block;
+            background: rgba(248,81,73,0.15);
+            color: var(--warn);
+            border: 1px solid var(--warn);
+            border-radius: 4px;
+            font-size: 0.7rem;
+            padding: 1px 6px;
+        }
+
+        #error-banner {
+            display: none;
+            background: rgba(248,81,73,0.1);
+            border: 1px solid var(--warn);
+            border-radius: 6px;
+            padding: 10px 16px;
+            color: var(--warn);
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="status-dot" id="status-dot"></div>
+    <h1>👻 GhostProfiler</h1>
+    <span id="last-updated">Connecting to metrics endpoint…</span>
+</header>
+
+<div id="error-banner" role="alert">
+    ⚠️ Cannot reach metrics endpoint. Is the agent running?
+    Check that the target app was started with <code>-javaagent:ghostprofiler-agent.jar</code>.
+</div>
+
+<!-- ── KPI cards ─────────────────────────────────────────────────── -->
+<div class="grid">
+    <div class="card">
+        <h2>Heap Used</h2>
+        <div class="metric-value" id="heap-used">—</div>
+        <div class="metric-sub" id="heap-max"></div>
+    </div>
+    <div class="card">
+        <h2>Non-Heap Used</h2>
+        <div class="metric-value" id="non-heap-used">—</div>
+        <div class="metric-sub">Metaspace + Code Cache</div>
+    </div>
+    <div class="card">
+        <h2>GC Collections</h2>
+        <div class="metric-value" id="gc-count">—</div>
+        <div class="metric-sub" id="gc-time"></div>
+    </div>
+    <div class="card">
+        <h2>N+1 Warnings</h2>
+        <div class="metric-value" id="n1-count">—</div>
+        <div class="metric-sub">Detected SQL pattern repetitions</div>
+    </div>
+</div>
+
+<!-- ── Heap trend chart ──────────────────────────────────────────── -->
+<div class="chart-card">
+    <h2>Heap Usage Over Time</h2>
+    <canvas id="heap-chart" height="80"></canvas>
+</div>
+
+<!-- ── Method timings table ─────────────────────────────────────── -->
+<div class="chart-card">
+    <h2>Top Methods by Avg Duration</h2>
+    <table id="methods-table">
+        <thead>
+            <tr>
+                <th>Method</th>
+                <th>Calls</th>
+                <th>Avg (ms)</th>
+                <th>Max (ms)</th>
+            </tr>
+        </thead>
+        <tbody id="methods-tbody">
+            <tr><td colspan="4" style="color:var(--text-muted)">Waiting for data…</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- ── N+1 warnings table ────────────────────────────────────────── -->
+<div class="chart-card">
+    <h2>N+1 Query Warnings</h2>
+    <table id="n1-table">
+        <thead>
+            <tr>
+                <th>SQL Pattern</th>
+                <th>Occurrences</th>
+                <th>Detected At</th>
+            </tr>
+        </thead>
+        <tbody id="n1-tbody">
+            <tr><td colspan="3" style="color:var(--text-muted)">No warnings yet.</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+    // ── Configuration ─────────────────────────────────────────────────────────
+    const METRICS_URL   = 'http://localhost:9090/metrics';
+    const POLL_INTERVAL = 2000; // ms
+    const MAX_HISTORY   = 60;   // data points kept in the heap chart
+
+    // ── State ─────────────────────────────────────────────────────────────────
+    const heapHistory = { labels: [], data: [] };
+
+    // ── Chart setup ───────────────────────────────────────────────────────────
+    const heapCtx = document.getElementById('heap-chart').getContext('2d');
+    const heapChart = new Chart(heapCtx, {
+        type: 'line',
+        data: {
+            labels: heapHistory.labels,
+            datasets: [{
+                label: 'Heap Used (MB)',
+                data: heapHistory.data,
+                borderColor: '#58a6ff',
+                backgroundColor: 'rgba(88,166,255,0.08)',
+                borderWidth: 2,
+                pointRadius: 0,
+                tension: 0.3,
+                fill: true,
+            }]
+        },
+        options: {
+            responsive: true,
+            animation: { duration: 300 },
+            scales: {
+                x: { display: false },
+                y: {
+                    grid: { color: '#30363d' },
+                    ticks: { color: '#8b949e' }
+                }
+            },
+            plugins: { legend: { display: false } }
+        }
+    });
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    function mb(bytes) { return (bytes / 1048576).toFixed(1) + ' MB'; }
+    function fmt(ms)   { return ms != null ? ms.toFixed(2) : '—'; }
+
+    function showError(show) {
+        document.getElementById('error-banner').style.display = show ? 'block' : 'none';
+        document.getElementById('status-dot').style.background = show ? '#f85149' : '#3fb950';
+    }
+
+    function updateLastUpdated() {
+        const now = new Date().toLocaleTimeString();
+        document.getElementById('last-updated').textContent = 'Last updated: ' + now;
+    }
+
+    // ── Render ────────────────────────────────────────────────────────────────
+    function render(data) {
+        // Memory KPIs
+        if (data.memory) {
+            document.getElementById('heap-used').textContent = mb(data.memory.heapUsedBytes ?? 0);
+            document.getElementById('heap-max').textContent  = 'of ' + mb(data.memory.heapMaxBytes ?? 0);
+            document.getElementById('non-heap-used').textContent = mb(data.memory.nonHeapUsedBytes ?? 0);
+
+            // Update chart
+            const label = new Date().toLocaleTimeString();
+            heapHistory.labels.push(label);
+            heapHistory.data.push(((data.memory.heapUsedBytes ?? 0) / 1048576).toFixed(2));
+            if (heapHistory.labels.length > MAX_HISTORY) {
+                heapHistory.labels.shift();
+                heapHistory.data.shift();
+            }
+            heapChart.update();
+        }
+
+        // GC KPIs (sum across all collectors)
+        if (data.gc && data.gc.length) {
+            const totalCount = data.gc.reduce((s, g) => s + (g.collectionCount ?? 0), 0);
+            const totalTime  = data.gc.reduce((s, g) => s + (g.collectionTimeMs  ?? 0), 0);
+            document.getElementById('gc-count').textContent = totalCount;
+            document.getElementById('gc-time').textContent  = 'Total pause: ' + totalTime + ' ms';
+        }
+
+        // Method timings table
+        if (data.methods) {
+            const rows = Object.entries(data.methods)
+                .sort((a, b) => (b[1].avgDurationMs ?? 0) - (a[1].avgDurationMs ?? 0))
+                .slice(0, 20);
+            const tbody = document.getElementById('methods-tbody');
+            if (rows.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="color:var(--text-muted)">No method data yet.</td></tr>';
+            } else {
+                tbody.innerHTML = rows.map(([method, stats]) => `
+                    <tr>
+                        <td style="font-family:monospace;font-size:0.8rem">${method}</td>
+                        <td>${stats.callCount ?? 0}</td>
+                        <td>${fmt(stats.avgDurationMs)}</td>
+                        <td>${fmt(stats.maxDurationMs)}</td>
+                    </tr>`).join('');
+            }
+        }
+
+        // N+1 warnings
+        if (data.nPlusOneWarnings) {
+            document.getElementById('n1-count').textContent = data.nPlusOneWarnings.length;
+            const tbody = document.getElementById('n1-tbody');
+            if (data.nPlusOneWarnings.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" style="color:var(--text-muted)">No warnings yet.</td></tr>';
+            } else {
+                tbody.innerHTML = data.nPlusOneWarnings.map(w => `
+                    <tr>
+                        <td style="font-family:monospace;font-size:0.8rem">
+                            <span class="warn-badge">N+1</span> ${w.normalizedSql ?? ''}
+                        </td>
+                        <td>${w.occurrences ?? 0}</td>
+                        <td>${w.detectedAt ? new Date(w.detectedAt).toLocaleTimeString() : '—'}</td>
+                    </tr>`).join('');
+            }
+        }
+    }
+
+    // ── Poll loop ─────────────────────────────────────────────────────────────
+    async function poll() {
+        try {
+            const res = await fetch(METRICS_URL);
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const data = await res.json();
+            showError(false);
+            updateLastUpdated();
+            render(data);
+        } catch (err) {
+            showError(true);
+        }
+    }
+
+    poll(); // immediate first poll
+    setInterval(poll, POLL_INTERVAL);
+</script>
+</body>
+</html>
