@@ -33,8 +33,9 @@ public class MethodInterceptor {
      */
     @Advice.OnMethodEnter
     public static long onEnter(@Advice.Origin String methodDescriptor) {
-        // TODO (step 3): push a CallTreeNode onto the thread-local call stack
-        return System.nanoTime();
+        long startNanos = System.nanoTime();
+        com.ghostprofiler.agent.collector.MetricsStore.getInstance().onMethodEnter(methodDescriptor, startNanos);
+        return startNanos;
     }
 
     /**
@@ -50,9 +51,8 @@ public class MethodInterceptor {
             @Advice.Enter long startNanos,
             @Advice.Thrown Throwable thrown) {
         try {
-            long elapsedNanos = System.nanoTime() - startNanos;
-            // TODO (step 3): record elapsedNanos in MetricsStore
-            // TODO (step 4): pop CallTreeNode from thread-local stack
+            long exitNanos = System.nanoTime();
+            com.ghostprofiler.agent.collector.MetricsStore.getInstance().onMethodExit(methodDescriptor, exitNanos, thrown != null);
         } catch (Throwable t) {
             // Never propagate — a bug here must not crash the host app (NFR2)
             LOG.warning("[GhostProfiler] onExit error for [" + methodDescriptor + "]: " + t.getMessage());

@@ -61,7 +61,9 @@ public class AgentMain {
             // Step 2: Parse configuration
             com.ghostprofiler.agent.config.AgentConfig config = new com.ghostprofiler.agent.config.AgentConfig(agentArgs);
             
-            // TODO (step 3): register MethodTimingTransformer with instrumentation
+            // Step 3: Register MethodTimingTransformer
+            new com.ghostprofiler.agent.instrumentation.MethodTimingTransformer(config.getIncludedPackages()).install(instrumentation);
+            
             // TODO (step 5): start MemoryMonitor and GcMonitor background threads
             // TODO (step 8): start MetricsHttpServer
             

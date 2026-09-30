@@ -3,6 +3,7 @@ C:\Users\shubh\OneDrive\Desktop\GhostProfiler\ghostprofiler-agent\src\test\java\
 C:\Users\shubh\OneDrive\Desktop\GhostProfiler\ghostprofiler-agent\src\test\java\com\ghostprofiler\agent\collector\MetricsStoreTest.java
 C:\Users\shubh\OneDrive\Desktop\GhostProfiler\ghostprofiler-agent\src\test\java\com\ghostprofiler\agent\collector\NPlusOneDetectorTest.java
 C:\Users\shubh\OneDrive\Desktop\GhostProfiler\ghostprofiler-agent\src\test\java\com\ghostprofiler\agent\config\AgentConfigTest.java
+C:\Users\shubh\OneDrive\Desktop\GhostProfiler\ghostprofiler-agent\src\test\java\com\ghostprofiler\agent\instrumentation\MethodInterceptorTest.java
 C:\Users\shubh\OneDrive\Desktop\GhostProfiler\ghostprofiler-agent\src\test\java\com\ghostprofiler\agent\jvm\GcMonitorTest.java
 C:\Users\shubh\OneDrive\Desktop\GhostProfiler\ghostprofiler-agent\src\test\java\com\ghostprofiler\agent\jvm\MemoryMonitorTest.java
 C:\Users\shubh\OneDrive\Desktop\GhostProfiler\ghostprofiler-agent\src\test\java\com\ghostprofiler\agent\server\MetricsJsonSerializerTest.java

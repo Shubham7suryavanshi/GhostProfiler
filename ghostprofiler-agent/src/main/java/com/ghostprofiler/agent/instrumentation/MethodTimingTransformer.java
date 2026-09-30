@@ -44,8 +44,26 @@ public class MethodTimingTransformer {
      * @param instrumentation  the JVM instrumentation handle from premain
      */
     public void install(Instrumentation instrumentation) {
-        // TODO (step 3): implement AgentBuilder configuration
-        LOG.info("[GhostProfiler] MethodTimingTransformer.install() stub called.");
+        if (includedPackages.isEmpty()) {
+            LOG.info("[GhostProfiler] No included packages configured. Instrumentation is disabled.");
+            return;
+        }
+
+        net.bytebuddy.matcher.ElementMatcher.Junction<TypeDescription> typeMatcher = net.bytebuddy.matcher.ElementMatchers.none();
+        for (String pkg : includedPackages) {
+            typeMatcher = typeMatcher.or(net.bytebuddy.matcher.ElementMatchers.nameStartsWith(pkg));
+        }
+
+        new AgentBuilder.Default()
+                .type(typeMatcher)
+                .transform((builder, typeDescription, classLoader, module, protectionDomain) ->
+                        builder.visit(net.bytebuddy.asm.Advice.to(MethodInterceptor.class)
+                                .on(net.bytebuddy.matcher.ElementMatchers.isMethod()
+                                        .and(net.bytebuddy.matcher.ElementMatchers.not(net.bytebuddy.matcher.ElementMatchers.isAbstract())))))
+                .with(new LoggingTransformListener())
+                .installOn(instrumentation);
+
+        LOG.info("[GhostProfiler] MethodTimingTransformer installed for packages: " + includedPackages);
     }
 
     // ── Inner listener for install-time diagnostics ─────────────────────────

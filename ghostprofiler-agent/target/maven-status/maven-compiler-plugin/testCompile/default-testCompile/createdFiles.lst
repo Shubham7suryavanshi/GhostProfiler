@@ -1,4 +1,5 @@
 com\ghostprofiler\agent\collector\NPlusOneDetectorTest.class
+com\ghostprofiler\agent\instrumentation\MethodInterceptorTest.class
 com\ghostprofiler\agent\AgentMainTest.class
 com\ghostprofiler\agent\config\AgentConfigTest.class
 com\ghostprofiler\agent\jvm\GcMonitorTest.class
