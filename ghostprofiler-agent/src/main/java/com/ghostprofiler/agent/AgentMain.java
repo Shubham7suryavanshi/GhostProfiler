@@ -57,11 +57,15 @@ public class AgentMain {
     private static void initialize(String agentArgs, Instrumentation instrumentation) {
         try {
             LOG.info("[GhostProfiler] Agent initializing. args=" + agentArgs);
-            // TODO (step 2): parse AgentConfig from agentArgs / system properties
+            
+            // Step 2: Parse configuration
+            com.ghostprofiler.agent.config.AgentConfig config = new com.ghostprofiler.agent.config.AgentConfig(agentArgs);
+            
             // TODO (step 3): register MethodTimingTransformer with instrumentation
             // TODO (step 5): start MemoryMonitor and GcMonitor background threads
             // TODO (step 8): start MetricsHttpServer
-            LOG.info("[GhostProfiler] Agent stub attached successfully.");
+            
+            LOG.info("[GhostProfiler] Agent attached successfully. Configuration active.");
         } catch (Throwable t) {
             // Fail-safe: log but never propagate — we must not crash the host app (NFR2)
             LOG.severe("[GhostProfiler] Agent initialization failed: " + t.getMessage());

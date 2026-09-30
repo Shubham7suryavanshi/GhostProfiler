@@ -61,14 +61,52 @@ public class AgentConfig {
 
     // ── Constructor ────────────────────────────────────────────────────────────
 
-    /**
-     * Creates a config by merging agent arguments and system properties.
-     *
-     * @param agentArgs the raw argument string from the -javaagent flag (may be null)
-     */
     public AgentConfig(String agentArgs) {
-        // TODO (step 2): implement actual parsing
-        LOG.info("[GhostProfiler] AgentConfig stub created. agentArgs=" + agentArgs);
+        // Parse agentArgs string (e.g. "port=9090,packages=com.example")
+        if (agentArgs != null && !agentArgs.trim().isEmpty()) {
+            for (String pair : agentArgs.split(",")) {
+                String[] kv = pair.split("=", 2);
+                if (kv.length == 2) {
+                    applyProperty(kv[0].trim(), kv[1].trim());
+                }
+            }
+        }
+
+        // System properties override agentArgs
+        applyProperty("port", System.getProperty("ghost.port"));
+        applyProperty("packages", System.getProperty("ghost.packages"));
+        applyProperty("samplingRate", System.getProperty("ghost.samplingRate"));
+        applyProperty("n1.threshold", System.getProperty("ghost.n1.threshold"));
+        applyProperty("n1.windowMs", System.getProperty("ghost.n1.windowMs"));
+
+        LOG.info("[GhostProfiler] Config initialized: " + this.toString());
+    }
+
+    private void applyProperty(String key, String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return;
+        }
+        try {
+            switch (key) {
+                case "port":
+                    this.httpPort = Integer.parseInt(value);
+                    break;
+                case "packages":
+                    this.includedPackages.addAll(Arrays.asList(value.split(":")));
+                    break;
+                case "samplingRate":
+                    this.samplingRate = Double.parseDouble(value);
+                    break;
+                case "n1.threshold":
+                    this.nPlusOneThreshold = Integer.parseInt(value);
+                    break;
+                case "n1.windowMs":
+                    this.nPlusOneWindowMs = Long.parseLong(value);
+                    break;
+            }
+        } catch (NumberFormatException e) {
+            LOG.warning("[GhostProfiler] Invalid numeric value for " + key + ": " + value);
+        }
     }
 
     // ── Accessors ─────────────────────────────────────────────────────────────
