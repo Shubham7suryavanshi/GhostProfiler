@@ -80,7 +80,8 @@ public class MetricsStore {
      * @param startNanos  {@code System.nanoTime()} from the enter advice
      */
     public void onMethodEnter(String methodName, long startNanos) {
-        // TODO (step 4): implement
+        CallTreeNode node = new CallTreeNode(methodName, startNanos);
+        callStack.get().push(node);
     }
 
     /**
@@ -93,7 +94,28 @@ public class MetricsStore {
      * @param threwException  true if the method exited via throw
      */
     public void onMethodExit(String methodName, long exitNanos, boolean threwException) {
-        // TODO (step 4): implement
+        java.util.Deque<CallTreeNode> stack = callStack.get();
+        CallTreeNode node = stack.poll();
+
+        if (node != null) {
+            node.complete(exitNanos, threwException);
+
+            // Update flat stats lock-free
+            MethodStats stats = methodStats.computeIfAbsent(methodName, k -> new MethodStats());
+            stats.recordCall(node.getDurationNanos());
+
+            CallTreeNode parent = stack.peek();
+            if (parent != null) {
+                parent.addChild(node);
+            } else {
+                // Root node completed
+                completedTrees.add(node);
+                // Keep tree list bounded to avoid OOM
+                if (completedTrees.size() > 100) {
+                    completedTrees.remove(0);
+                }
+            }
+        }
     }
 
     /**
@@ -135,19 +157,31 @@ public class MetricsStore {
     /**
      * Aggregate statistics for a single method.
      * Uses volatile longs for visibility without locking.
-     * (Full atomicity is provided by ConcurrentHashMap.merge in step 4.)
      */
     public static class MethodStats {
-        private volatile long callCount = 0;
-        private volatile long totalDurationNanos = 0;
-        private volatile long maxDurationNanos = 0;
+        private final java.util.concurrent.atomic.LongAdder callCount = new java.util.concurrent.atomic.LongAdder();
+        private final java.util.concurrent.atomic.LongAdder totalDurationNanos = new java.util.concurrent.atomic.LongAdder();
+        private final java.util.concurrent.atomic.AtomicLong maxDurationNanos = new java.util.concurrent.atomic.AtomicLong(0);
 
-        public long getCallCount() { return callCount; }
-        public long getTotalDurationNanos() { return totalDurationNanos; }
-        public long getMaxDurationNanos() { return maxDurationNanos; }
+        public void recordCall(long durationNanos) {
+            callCount.increment();
+            totalDurationNanos.add(durationNanos);
+            long currentMax;
+            do {
+                currentMax = maxDurationNanos.get();
+                if (durationNanos <= currentMax) {
+                    break;
+                }
+            } while (!maxDurationNanos.compareAndSet(currentMax, durationNanos));
+        }
+
+        public long getCallCount() { return callCount.sum(); }
+        public long getTotalDurationNanos() { return totalDurationNanos.sum(); }
+        public long getMaxDurationNanos() { return maxDurationNanos.get(); }
 
         public double getAvgDurationMs() {
-            return callCount == 0 ? 0 : (totalDurationNanos / 1_000_000.0) / callCount;
+            long count = callCount.sum();
+            return count == 0 ? 0 : (totalDurationNanos.sum() / 1_000_000.0) / count;
         }
     }
 }

@@ -14,50 +14,67 @@ class MetricsStoreTest {
 
     @BeforeEach
     void resetStore() {
-        // Start each test with a clean slate
         MetricsStore.getInstance().reset();
     }
 
     @Test
-    void getInstance_returnsSameInstance() {
-        MetricsStore a = MetricsStore.getInstance();
-        MetricsStore b = MetricsStore.getInstance();
-        assertSame(a, b, "MetricsStore must be a singleton");
-    }
-
-    @Test
-    void reset_clearsMethodStats() {
+    void testCallStackManagement() {
         MetricsStore store = MetricsStore.getInstance();
-        // In step 4 this will actually populate data; for now just verify no crash
-        store.reset();
-        assertTrue(store.getMethodStats().isEmpty());
+        
+        // Simulating:
+        // root() {
+        //   child()
+        // }
+        
+        store.onMethodEnter("root", 1000);
+        store.onMethodEnter("child", 2000);
+        
+        store.onMethodExit("child", 3000, false);
+        store.onMethodExit("root", 4000, false);
+        
+        assertEquals(1, store.getCompletedTrees().size());
+        
+        CallTreeNode root = store.getCompletedTrees().get(0);
+        assertEquals("root", root.getMethodName());
+        assertEquals(3000, root.getDurationNanos()); // 4000 - 1000
+        
+        assertEquals(1, root.getChildren().size());
+        CallTreeNode child = root.getChildren().get(0);
+        assertEquals("child", child.getMethodName());
+        assertEquals(1000, child.getDurationNanos()); // 3000 - 2000
     }
 
     @Test
-    void reset_clearsCompletedTrees() {
+    void testConcurrency() throws InterruptedException {
         MetricsStore store = MetricsStore.getInstance();
-        store.reset();
-        assertTrue(store.getCompletedTrees().isEmpty());
-    }
-
-    @Test
-    void onMethodEnter_doesNotThrow() {
-        assertDoesNotThrow(() ->
-            MetricsStore.getInstance().onMethodEnter("com.example.Service#foo", System.nanoTime())
-        );
-    }
-
-    @Test
-    void onMethodExit_doesNotThrow() {
-        assertDoesNotThrow(() ->
-            MetricsStore.getInstance().onMethodExit("com.example.Service#foo", System.nanoTime(), false)
-        );
-    }
-
-    @Test
-    void recordQuery_doesNotThrow() {
-        assertDoesNotThrow(() ->
-            MetricsStore.getInstance().recordQuery("SELECT * FROM orders", 1_000_000L)
-        );
+        int threadCount = 10;
+        int iterations = 100;
+        
+        java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newFixedThreadPool(threadCount);
+        java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(threadCount);
+        
+        for (int i = 0; i < threadCount; i++) {
+            executor.submit(() -> {
+                try {
+                    for (int j = 0; j < iterations; j++) {
+                        store.onMethodEnter("concurrentMethod", j * 100);
+                        store.onMethodExit("concurrentMethod", (j * 100) + 10, false);
+                    }
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+        
+        assertTrue(latch.await(5, java.util.concurrent.TimeUnit.SECONDS));
+        executor.shutdown();
+        
+        // Assert total calls
+        MetricsStore.MethodStats stats = store.getMethodStats().get("concurrentMethod");
+        assertEquals(threadCount * iterations, stats.getCallCount());
+        assertEquals(threadCount * iterations * 10, stats.getTotalDurationNanos());
+        
+        // Max size bounded to 100 trees
+        assertTrue(store.getCompletedTrees().size() <= 100);
     }
 }
