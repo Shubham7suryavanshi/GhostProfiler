@@ -50,16 +50,61 @@ public class GcMonitor {
 
     /**
      * Starts the background GC sampling thread (daemon).
+     *
+     * <p>On each tick, reads the cumulative collection count and time from
+     * every GarbageCollectorMXBean and builds a fresh immutable snapshot.
+     * Using a volatile reference swap so the HTTP server thread always reads a
+     * consistent, fully-constructed list (no partial reads).
      */
     public void start() {
-        // TODO (step 5): implement
-        LOG.info("[GhostProfiler] GcMonitor.start() stub called. Found " +
-                 gcBeans.size() + " GC collector(s).");
+        if (samplerThread != null) {
+            return; // already running
+        }
+
+        samplerThread = new Thread(() -> {
+            while (!Thread.currentThread().isInterrupted()) {
+                try {
+                    // Build a new snapshot from each GC bean
+                    List<GcStats> snapshot = new ArrayList<>(gcBeans.size());
+                    for (GarbageCollectorMXBean bean : gcBeans) {
+                        snapshot.add(new GcStats(
+                                bean.getName(),
+                                bean.getCollectionCount(),  // -1 if not supported
+                                bean.getCollectionTime()    // -1 if not supported
+                        ));
+                    }
+                    // Atomic reference replacement — readers always see a full list
+                    latestStats = Collections.unmodifiableList(snapshot);
+
+                    Thread.sleep(intervalMs);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                } catch (Exception e) {
+                    // Never crash the host app (NFR2)
+                    LOG.warning("[GhostProfiler] GC sampling failed: " + e.getMessage());
+                }
+            }
+        });
+        samplerThread.setDaemon(true);
+        samplerThread.setName("GhostProfiler-GcMonitor");
+        samplerThread.setPriority(Thread.MIN_PRIORITY); // low-priority — don't compete with app
+        samplerThread.start();
+
+        LOG.info("[GhostProfiler] GcMonitor started. Sampling every " + intervalMs +
+                 "ms across " + gcBeans.size() + " collector(s).");
     }
 
-    /** Stops the sampler gracefully. */
+    /**
+     * Stops the background GC sampling thread gracefully.
+     * The thread will finish its current sleep and exit on the next iteration.
+     */
     public void stop() {
-        // TODO (step 5): implement
+        if (samplerThread != null) {
+            samplerThread.interrupt();
+            samplerThread = null;
+            LOG.info("[GhostProfiler] GcMonitor stopped.");
+        }
     }
 
     /**

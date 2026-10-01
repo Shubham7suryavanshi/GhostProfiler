@@ -1,46 +1,55 @@
 package com.ghostprofiler.demo.controller;
 
+import com.ghostprofiler.demo.model.Order;
+import com.ghostprofiler.demo.service.OrderService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 
 /**
- * OrderController — REST API for the demo application's order resource.
+ * OrderController — REST API for the demo application order resource.
  *
  * <p>Endpoints:
  * <ul>
  *   <li>{@code GET /orders}      — returns all orders (triggers the N+1 bug)</li>
  *   <li>{@code GET /orders/slow} — artificially slow endpoint for latency testing</li>
  * </ul>
- *
- * <p>STUB — real service calls added in step 7.
  */
 @RestController
 @RequestMapping("/orders")
 public class OrderController {
 
-    // TODO (step 7): inject OrderService via constructor injection
+    private final OrderService orderService;
+
+    /** Constructor injection — explicit dependency, easy to test. */
+    public OrderController(OrderService orderService) {
+        this.orderService = orderService;
+    }
 
     /**
      * Returns all orders. The underlying service has a deliberate N+1 query bug
      * that the GhostProfiler agent should detect.
+     *
+     * @return list of all orders as JSON
      */
     @GetMapping
-    public List<String> getAllOrders() {
-        // TODO (step 7): return orderService.getAllOrders()
-        return List.of("stub-order-1", "stub-order-2");
+    public List<Order> getAllOrders() {
+        return orderService.getAllOrders();
     }
 
     /**
-     * Artificially slow endpoint — sleeps 200ms to simulate downstream I/O.
+     * Artificially slow endpoint — delegates to OrderService which sleeps 200ms.
      * Useful for verifying that the agent correctly measures and reports latency.
+     *
+     * @return a JSON message confirming the operation completed
+     * @throws InterruptedException if sleep is interrupted
      */
     @GetMapping("/slow")
-    public String slowEndpoint() throws InterruptedException {
-        // TODO (step 7): call orderService.processSlowly()
-        Thread.sleep(200);
-        return "{\"message\": \"slow response stub\"}";
+    public Map<String, String> slowEndpoint() throws InterruptedException {
+        String result = orderService.processSlowly();
+        return Map.of("message", result);
     }
 }

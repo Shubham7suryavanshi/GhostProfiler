@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="com.ghostprofiler.agent.config.AgentConfigTest" time="0.016" tests="4" errors="0" skipped="0" failures="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="com.ghostprofiler.agent.config.AgentConfigTest" time="0.049" tests="4" errors="0" skipped="0" failures="0">
   <properties>
     <property name="java.specification.version" value="25"/>
     <property name="sun.cpu.isalist" value="amd64"/>
@@ -15,7 +15,7 @@
     <property name="sun.java.launcher" value="SUN_STANDARD"/>
     <property name="user.country" value="IN"/>
     <property name="sun.boot.library.path" value="C:\Program Files\Java\jdk-25\bin"/>
-    <property name="sun.java.command" value="C:\Users\shubh\AppData\Local\Temp\surefire2647812205168706909\surefirebooter-20260930135240787_3.jar C:\Users\shubh\AppData\Local\Temp\surefire2647812205168706909 2026-09-30T13-52-37_536-jvmRun1 surefire-20260930135240787_1tmp surefire_0-20260930135240787_2tmp"/>
+    <property name="sun.java.command" value="C:\Users\shubh\AppData\Local\Temp\surefire11751412337081471192\surefirebooter-20261001173415039_3.jar C:\Users\shubh\AppData\Local\Temp\surefire11751412337081471192 2026-10-01T17-34-14_212-jvmRun1 surefire-20261001173415039_1tmp surefire_0-20261001173415039_2tmp"/>
     <property name="jdk.debug" value="release"/>
     <property name="surefire.test.class.path" value="C:\Users\shubh\OneDrive\Desktop\GhostProfiler\ghostprofiler-agent\target\test-classes;C:\Users\shubh\OneDrive\Desktop\GhostProfiler\ghostprofiler-agent\target\classes;C:\Users\shubh\.m2\repository\net\bytebuddy\byte-buddy\1.14.17\byte-buddy-1.14.17.jar;C:\Users\shubh\.m2\repository\net\bytebuddy\byte-buddy-agent\1.14.17\byte-buddy-agent-1.14.17.jar;C:\Users\shubh\.m2\repository\com\fasterxml\jackson\core\jackson-databind\2.17.2\jackson-databind-2.17.2.jar;C:\Users\shubh\.m2\repository\com\fasterxml\jackson\core\jackson-annotations\2.17.2\jackson-annotations-2.17.2.jar;C:\Users\shubh\.m2\repository\com\fasterxml\jackson\core\jackson-core\2.17.2\jackson-core-2.17.2.jar;C:\Users\shubh\.m2\repository\org\junit\jupiter\junit-jupiter\5.10.3\junit-jupiter-5.10.3.jar;C:\Users\shubh\.m2\repository\org\junit\jupiter\junit-jupiter-api\5.10.3\junit-jupiter-api-5.10.3.jar;C:\Users\shubh\.m2\repository\org\opentest4j\opentest4j\1.3.0\opentest4j-1.3.0.jar;C:\Users\shubh\.m2\repository\org\junit\platform\junit-platform-commons\1.10.3\junit-platform-commons-1.10.3.jar;C:\Users\shubh\.m2\repository\org\apiguardian\apiguardian-api\1.1.2\apiguardian-api-1.1.2.jar;C:\Users\shubh\.m2\repository\org\junit\jupiter\junit-jupiter-params\5.10.3\junit-jupiter-params-5.10.3.jar;C:\Users\shubh\.m2\repository\org\junit\jupiter\junit-jupiter-engine\5.10.3\junit-jupiter-engine-5.10.3.jar;C:\Users\shubh\.m2\repository\org\junit\platform\junit-platform-engine\1.10.3\junit-platform-engine-1.10.3.jar;C:\Users\shubh\.m2\repository\org\mockito\mockito-core\5.12.0\mockito-core-5.12.0.jar;C:\Users\shubh\.m2\repository\org\objenesis\objenesis\3.3\objenesis-3.3.jar;C:\Users\shubh\.m2\repository\org\mockito\mockito-junit-jupiter\5.12.0\mockito-junit-jupiter-5.12.0.jar;"/>
     <property name="sun.cpu.endian" value="little"/>
@@ -30,7 +30,7 @@
     <property name="line.separator" value="&#10;"/>
     <property name="java.vm.specification.vendor" value="Oracle Corporation"/>
     <property name="java.specification.name" value="Java Platform API Specification"/>
-    <property name="surefire.real.class.path" value="C:\Users\shubh\AppData\Local\Temp\surefire2647812205168706909\surefirebooter-20260930135240787_3.jar"/>
+    <property name="surefire.real.class.path" value="C:\Users\shubh\AppData\Local\Temp\surefire11751412337081471192\surefirebooter-20261001173415039_3.jar"/>
     <property name="user.script" value=""/>
     <property name="sun.management.compiler" value="HotSpot 64-Bit Tiered Compilers"/>
     <property name="java.runtime.version" value="25.0.1+8-LTS-27"/>
@@ -59,24 +59,24 @@
     <property name="sun.io.unicode.encoding" value="UnicodeLittle"/>
     <property name="java.class.version" value="69.0"/>
   </properties>
-  <testcase name="constructor_withEmptyArgs_doesNotThrow" classname="com.ghostprofiler.agent.config.AgentConfigTest" time="0.004">
-    <system-err><![CDATA[Sept 30, 2026 1:52:47 PM com.ghostprofiler.agent.config.AgentConfig <init>
-INFO: [GhostProfiler] AgentConfig stub created. agentArgs=
+  <testcase name="constructor_withEmptyArgs_doesNotThrow" classname="com.ghostprofiler.agent.config.AgentConfigTest" time="0.018">
+    <system-err><![CDATA[Oct 01, 2026 5:34:24 PM com.ghostprofiler.agent.config.AgentConfig <init>
+INFO: [GhostProfiler] Config initialized: AgentConfig{httpPort=9090, includedPackages=[], samplingRate=1.0, nPlusOneThreshold=5, nPlusOneWindowMs=1000}
 ]]></system-err>
   </testcase>
-  <testcase name="constructor_withGarbageArgs_doesNotThrow" classname="com.ghostprofiler.agent.config.AgentConfigTest" time="0.001">
-    <system-err><![CDATA[Sept 30, 2026 1:52:47 PM com.ghostprofiler.agent.config.AgentConfig <init>
-INFO: [GhostProfiler] AgentConfig stub created. agentArgs=!!!not=valid===config!!!
+  <testcase name="constructor_withGarbageArgs_doesNotThrow" classname="com.ghostprofiler.agent.config.AgentConfigTest" time="0.003">
+    <system-err><![CDATA[Oct 01, 2026 5:34:24 PM com.ghostprofiler.agent.config.AgentConfig <init>
+INFO: [GhostProfiler] Config initialized: AgentConfig{httpPort=9090, includedPackages=[], samplingRate=1.0, nPlusOneThreshold=5, nPlusOneWindowMs=1000}
 ]]></system-err>
   </testcase>
-  <testcase name="constructor_withNullArgs_doesNotThrow" classname="com.ghostprofiler.agent.config.AgentConfigTest" time="0.001">
-    <system-err><![CDATA[Sept 30, 2026 1:52:47 PM com.ghostprofiler.agent.config.AgentConfig <init>
-INFO: [GhostProfiler] AgentConfig stub created. agentArgs=null
+  <testcase name="constructor_withNullArgs_doesNotThrow" classname="com.ghostprofiler.agent.config.AgentConfigTest" time="0.003">
+    <system-err><![CDATA[Oct 01, 2026 5:34:24 PM com.ghostprofiler.agent.config.AgentConfig <init>
+INFO: [GhostProfiler] Config initialized: AgentConfig{httpPort=9090, includedPackages=[], samplingRate=1.0, nPlusOneThreshold=5, nPlusOneWindowMs=1000}
 ]]></system-err>
   </testcase>
-  <testcase name="defaults_areReasonable" classname="com.ghostprofiler.agent.config.AgentConfigTest" time="0.002">
-    <system-err><![CDATA[Sept 30, 2026 1:52:47 PM com.ghostprofiler.agent.config.AgentConfig <init>
-INFO: [GhostProfiler] AgentConfig stub created. agentArgs=null
+  <testcase name="defaults_areReasonable" classname="com.ghostprofiler.agent.config.AgentConfigTest" time="0.008">
+    <system-err><![CDATA[Oct 01, 2026 5:34:24 PM com.ghostprofiler.agent.config.AgentConfig <init>
+INFO: [GhostProfiler] Config initialized: AgentConfig{httpPort=9090, includedPackages=[], samplingRate=1.0, nPlusOneThreshold=5, nPlusOneWindowMs=1000}
 ]]></system-err>
   </testcase>
 </testsuite>

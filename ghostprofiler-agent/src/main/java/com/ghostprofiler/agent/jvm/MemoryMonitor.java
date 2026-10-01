@@ -51,15 +51,44 @@ public class MemoryMonitor {
      * Called once from {@link com.ghostprofiler.agent.AgentMain}.
      */
     public void start() {
-        // TODO (step 5): implement background thread
-        LOG.info("[GhostProfiler] MemoryMonitor.start() stub called.");
+        if (samplerThread != null) {
+            return;
+        }
+        
+        samplerThread = new Thread(() -> {
+            while (!Thread.currentThread().isInterrupted()) {
+                try {
+                    MemoryUsage heap = memoryMXBean.getHeapMemoryUsage();
+                    MemoryUsage nonHeap = memoryMXBean.getNonHeapMemoryUsage();
+                    
+                    heapUsedBytes = heap.getUsed();
+                    heapMaxBytes = heap.getMax();
+                    nonHeapUsedBytes = nonHeap.getUsed();
+                    
+                    Thread.sleep(intervalMs);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                } catch (Exception e) {
+                    LOG.warning("[GhostProfiler] Memory sampling failed: " + e.getMessage());
+                }
+            }
+        });
+        samplerThread.setDaemon(true);
+        samplerThread.setName("GhostProfiler-MemoryMonitor");
+        samplerThread.start();
+        
+        LOG.info("[GhostProfiler] MemoryMonitor started. Sampling every " + intervalMs + "ms");
     }
 
     /**
      * Stops the background sampling thread gracefully.
      */
     public void stop() {
-        // TODO (step 5): implement
+        if (samplerThread != null) {
+            samplerThread.interrupt();
+            samplerThread = null;
+        }
     }
 
     /**

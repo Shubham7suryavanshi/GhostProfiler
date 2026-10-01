@@ -49,21 +49,50 @@ public class MethodTimingTransformer {
             return;
         }
 
-        net.bytebuddy.matcher.ElementMatcher.Junction<TypeDescription> typeMatcher = net.bytebuddy.matcher.ElementMatchers.none();
+        // Build a compound type matcher covering all configured package prefixes
+        net.bytebuddy.matcher.ElementMatcher.Junction<TypeDescription> typeMatcher =
+                net.bytebuddy.matcher.ElementMatchers.none();
         for (String pkg : includedPackages) {
             typeMatcher = typeMatcher.or(net.bytebuddy.matcher.ElementMatchers.nameStartsWith(pkg));
         }
 
+        // ── 1. Method timing transformer ────────────────────────────────────
+        // Intercepts every non-abstract method in the configured packages and
+        // injects the @Advice bytecode from MethodInterceptor.
         new AgentBuilder.Default()
+                // Never instrument the agent's own classes — prevents infinite loops
+                .ignore(net.bytebuddy.matcher.ElementMatchers.nameStartsWith("com.ghostprofiler.agent"))
                 .type(typeMatcher)
                 .transform((builder, typeDescription, classLoader, module, protectionDomain) ->
                         builder.visit(net.bytebuddy.asm.Advice.to(MethodInterceptor.class)
                                 .on(net.bytebuddy.matcher.ElementMatchers.isMethod()
-                                        .and(net.bytebuddy.matcher.ElementMatchers.not(net.bytebuddy.matcher.ElementMatchers.isAbstract())))))
+                                        .and(net.bytebuddy.matcher.ElementMatchers.not(
+                                                net.bytebuddy.matcher.ElementMatchers.isAbstract())))))
                 .with(new LoggingTransformListener())
                 .installOn(instrumentation);
 
-        LOG.info("[GhostProfiler] MethodTimingTransformer installed for packages: " + includedPackages);
+        // ── 2. JDBC interceptor ─────────────────────────────────────────────
+        // Intercepts java.sql.Statement.execute*() and
+        // java.sql.PreparedStatement.execute*() to capture SQL + duration.
+        // We match on the concrete driver implementation classes (not the interface)
+        // because ByteBuddy instruments loaded class bytecode, not interfaces.
+        new AgentBuilder.Default()
+                .ignore(net.bytebuddy.matcher.ElementMatchers.nameStartsWith("com.ghostprofiler.agent"))
+                // Match any class whose name contains well-known JDBC implementation patterns
+                .type(net.bytebuddy.matcher.ElementMatchers
+                        .hasSuperType(net.bytebuddy.matcher.ElementMatchers
+                                .named("java.sql.Statement")))
+                .transform((builder, typeDescription, classLoader, module, protectionDomain) ->
+                        builder.visit(net.bytebuddy.asm.Advice.to(JdbcInterceptor.class)
+                                .on(net.bytebuddy.matcher.ElementMatchers.nameStartsWith("execute")
+                                        .and(net.bytebuddy.matcher.ElementMatchers.isMethod())
+                                        .and(net.bytebuddy.matcher.ElementMatchers.takesArgument(
+                                                0, String.class)))))
+                .with(new LoggingTransformListener())
+                .installOn(instrumentation);
+
+        LOG.info("[GhostProfiler] MethodTimingTransformer + JdbcInterceptor installed for packages: "
+                + includedPackages);
     }
 
     // ── Inner listener for install-time diagnostics ─────────────────────────

@@ -1,40 +1,28 @@
 package com.ghostprofiler.demo.repository;
 
+import com.ghostprofiler.demo.model.Order;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
 /**
- * OrderRepository — the data access layer for the demo app.
+ * OrderRepository — Spring Data JPA repository for the Order entity.
  *
- * <p>In step 7 this will be a proper Spring Data JPA repository backed by
- * an H2 in-memory database with a pre-seeded dataset (50+ orders) so the
- * N+1 bug in {@link com.ghostprofiler.demo.service.OrderService} is clearly
- * visible in the agent's JDBC interception output.
- *
- * <p>STUB — JPA entity and real queries added in step 7.
+ * <p>Spring generates the implementation at runtime; no SQL is written here.
+ * The findAllIds() method intentionally returns only IDs so that OrderService
+ * can then query each order individually — creating the N+1 bug that
+ * GhostProfiler detects.
  */
 @Repository
-public class OrderRepository {
+public interface OrderRepository extends JpaRepository<Order, Long> {
 
     /**
-     * Returns all order IDs.
-     * In the real implementation this is a single {@code SELECT id FROM orders}.
+     * Returns only the primary keys of all orders.
+     * This is a single query: SELECT id FROM orders.
+     * OrderService then calls findById() for each ID — the N+1 pattern.
      */
-    public List<Long> findAllIds() {
-        // TODO (step 7): implement with JPA
-        return List.of(1L, 2L, 3L);
-    }
-
-    /**
-     * Returns the order details for a single ID.
-     * Called in a loop by OrderService, causing the N+1 pattern.
-     *
-     * @param id  the order primary key
-     * @return    order details as a string (will be an entity in step 7)
-     */
-    public String findById(long id) {
-        // TODO (step 7): implement with JPA — SELECT * FROM orders WHERE id = ?
-        return "Order#" + id;
-    }
+    @Query("SELECT o.id FROM Order o")
+    List<Long> findAllIds();
 }

@@ -1,4 +1,5 @@
-com\ghostprofiler\demo\service\OrderService.class
-com\ghostprofiler\demo\DemoApplication.class
 com\ghostprofiler\demo\repository\OrderRepository.class
 com\ghostprofiler\demo\controller\OrderController.class
+com\ghostprofiler\demo\model\Order.class
+com\ghostprofiler\demo\service\OrderService.class
+com\ghostprofiler\demo\DemoApplication.class

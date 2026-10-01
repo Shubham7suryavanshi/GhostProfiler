@@ -47,6 +47,12 @@ public class MetricsStore {
     private final List<CallTreeNode> completedTrees = new CopyOnWriteArrayList<>();
 
     /**
+     * Dedicated N+1 detector. Initialized with defaults; updated when
+     * AgentConfig is available via {@link #setDetectorConfig}.
+     */
+    private volatile NPlusOneDetector detector = new NPlusOneDetector(5, 1000L);
+
+    /**
      * Per-thread stack tracking the current call chain.
      * Using a Deque-based stack so we can push on enter and pop on exit
      * without touching other threads' stacks.
@@ -119,17 +125,44 @@ public class MetricsStore {
     }
 
     /**
-     * Records a JDBC query execution for N+1 analysis.
+     * Records a JDBC query execution timing in the flat stats map.
      *
-     * @param sql          the SQL query string
+     * @param sql          the SQL query string (used as the key)
      * @param durationNanos  execution time in nanoseconds
      */
     public void recordQuery(String sql, long durationNanos) {
-        // TODO (step 6): implement
+        if (sql == null || sql.isBlank()) {
+            return;
+        }
+        // Prefix query keys with "[SQL] " so they are visually distinct from
+        // method names in the /metrics output.
+        String key = "[SQL] " + sql.trim();
+        MethodStats stats = methodStats.computeIfAbsent(key, k -> new MethodStats());
+        stats.recordCall(durationNanos);
     }
 
     /**
-     * Returns an immutable snapshot of current method stats.
+     * Forwards a SQL query to the N+1 detector for pattern analysis.
+     *
+     * @param sql  raw SQL string from the JDBC interceptor
+     */
+    public void recordQueryForNPlusOne(String sql) {
+        detector.record(sql);
+    }
+
+    /**
+     * Replaces the N+1 detector with one using config-specified thresholds.
+     * Called from AgentMain after AgentConfig is parsed.
+     *
+     * @param threshold  occurrence count threshold
+     * @param windowMs   sliding window in milliseconds
+     */
+    public void setDetectorConfig(int threshold, long windowMs) {
+        this.detector = new NPlusOneDetector(threshold, windowMs);
+    }
+
+    /**
+     * Returns the most recent GC statistics snapshot.
      * Safe to call from any thread at any time.
      */
     public Map<String, MethodStats> getMethodStats() {
@@ -142,6 +175,13 @@ public class MetricsStore {
      */
     public List<CallTreeNode> getCompletedTrees() {
         return completedTrees;
+    }
+
+    /**
+     * Exposes the N+1 detector for serialization in /metrics output.
+     */
+    public NPlusOneDetector getDetector() {
+        return detector;
     }
 
     /**

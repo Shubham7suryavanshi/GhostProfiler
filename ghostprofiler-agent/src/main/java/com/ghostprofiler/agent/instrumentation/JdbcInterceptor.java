@@ -30,7 +30,7 @@ public class JdbcInterceptor {
      */
     @Advice.OnMethodEnter
     public static long onEnter(@Advice.Argument(0) String sql) {
-        // TODO (step 6): log query start
+        // Capture start time at entry; the SQL is passed to onExit via @Advice.Enter
         return System.nanoTime();
     }
 
@@ -48,8 +48,12 @@ public class JdbcInterceptor {
             @Advice.Thrown Throwable thrown) {
         try {
             long elapsedNanos = System.nanoTime() - startNanos;
-            // TODO (step 6): record (sql, elapsedNanos) in MetricsStore
-            // TODO (step 6): pass sql to NPlusOneDetector.record(sql)
+            // Record timing in the central store for the /metrics endpoint
+            com.ghostprofiler.agent.collector.MetricsStore.getInstance()
+                    .recordQuery(sql, elapsedNanos);
+            // Pass to N+1 detector for pattern analysis
+            com.ghostprofiler.agent.collector.MetricsStore.getInstance()
+                    .recordQueryForNPlusOne(sql);
         } catch (Throwable t) {
             // Fail-safe: never crash the host app (NFR2)
             LOG.warning("[GhostProfiler] JdbcInterceptor.onExit error: " + t.getMessage());

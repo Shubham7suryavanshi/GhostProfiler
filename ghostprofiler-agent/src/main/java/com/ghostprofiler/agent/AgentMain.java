@@ -57,17 +57,40 @@ public class AgentMain {
     private static void initialize(String agentArgs, Instrumentation instrumentation) {
         try {
             LOG.info("[GhostProfiler] Agent initializing. args=" + agentArgs);
-            
-            // Step 2: Parse configuration
-            com.ghostprofiler.agent.config.AgentConfig config = new com.ghostprofiler.agent.config.AgentConfig(agentArgs);
-            
-            // Step 3: Register MethodTimingTransformer
-            new com.ghostprofiler.agent.instrumentation.MethodTimingTransformer(config.getIncludedPackages()).install(instrumentation);
-            
-            // TODO (step 5): start MemoryMonitor and GcMonitor background threads
-            // TODO (step 8): start MetricsHttpServer
-            
-            LOG.info("[GhostProfiler] Agent attached successfully. Configuration active.");
+
+            // Step 1: Parse configuration from agent args + system properties
+            com.ghostprofiler.agent.config.AgentConfig config =
+                    new com.ghostprofiler.agent.config.AgentConfig(agentArgs);
+
+            // Step 2: Configure the N+1 detector in MetricsStore with user-supplied thresholds
+            com.ghostprofiler.agent.collector.MetricsStore.getInstance()
+                    .setDetectorConfig(config.getNPlusOneThreshold(), config.getNPlusOneWindowMs());
+
+            // Step 3: Install method timing + JDBC instrumentation via ByteBuddy
+            new com.ghostprofiler.agent.instrumentation.MethodTimingTransformer(
+                    config.getIncludedPackages()).install(instrumentation);
+
+            // Step 4: Start memory sampling daemon thread
+            com.ghostprofiler.agent.jvm.MemoryMonitor memoryMonitor =
+                    new com.ghostprofiler.agent.jvm.MemoryMonitor(5000L); // sample every 5s
+            memoryMonitor.start();
+
+            // Step 5: Start GC sampling daemon thread
+            com.ghostprofiler.agent.jvm.GcMonitor gcMonitor =
+                    new com.ghostprofiler.agent.jvm.GcMonitor(5000L); // sample every 5s
+            gcMonitor.start();
+
+            // Step 6: Start the embedded HTTP server for /metrics and /health
+            com.ghostprofiler.agent.server.MetricsHttpServer httpServer =
+                    new com.ghostprofiler.agent.server.MetricsHttpServer(
+                            config.getHttpPort(),
+                            com.ghostprofiler.agent.collector.MetricsStore.getInstance(),
+                            memoryMonitor,
+                            gcMonitor);
+            httpServer.start();
+
+            LOG.info("[GhostProfiler] Agent attached successfully. Metrics available at http://localhost:"
+                    + config.getHttpPort() + "/metrics");
         } catch (Throwable t) {
             // Fail-safe: log but never propagate — we must not crash the host app (NFR2)
             LOG.severe("[GhostProfiler] Agent initialization failed: " + t.getMessage());

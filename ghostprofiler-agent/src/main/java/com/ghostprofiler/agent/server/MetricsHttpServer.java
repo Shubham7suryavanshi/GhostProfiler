@@ -67,9 +67,52 @@ public class MetricsHttpServer {
      *
      * @throws IOException if the port is already in use
      */
+    /**
+     * Starts the HTTP server on the configured port.
+     *
+     * <p>The server is given a single-thread executor. All metrics reads are
+     * fast in-memory operations, so one thread is sufficient and avoids the
+     * overhead of a thread pool.
+     *
+     * @throws IOException if the port is already in use
+     */
     public void start() throws IOException {
-        // TODO (step 8): register /metrics and /health handlers
-        LOG.info("[GhostProfiler] MetricsHttpServer.start() stub called on port " + port);
+        server = HttpServer.create(new InetSocketAddress(port), 0);
+
+        // /metrics — full JSON snapshot of all collected metrics
+        server.createContext("/metrics", exchange -> {
+            try {
+                if (!"GET".equalsIgnoreCase(exchange.getRequestMethod())) {
+                    sendJson(exchange, 405, "{\"error\":\"Method Not Allowed\"}");
+                    return;
+                }
+                String json = serializer.serialize(metricsStore, memoryMonitor, gcMonitor);
+                sendJson(exchange, 200, json);
+            } catch (Throwable t) {
+                // Never crash the server thread (NFR2)
+                LOG.warning("[GhostProfiler] /metrics handler error: " + t.getMessage());
+                sendJson(exchange, 500, "{\"error\":\"internal error\"}");
+            }
+        });
+
+        // /health — simple liveness probe used by the dashboard
+        server.createContext("/health", exchange -> {
+            try {
+                sendJson(exchange, 200, "{\"status\":\"ok\"}");
+            } catch (Throwable t) {
+                LOG.warning("[GhostProfiler] /health handler error: " + t.getMessage());
+            }
+        });
+
+        // Use a single-thread executor — metrics reads are cheap in-memory ops
+        server.setExecutor(Executors.newSingleThreadExecutor(r -> {
+            Thread t = new Thread(r, "GhostProfiler-HttpServer");
+            t.setDaemon(true);
+            return t;
+        }));
+        server.start();
+        LOG.info("[GhostProfiler] MetricsHttpServer started on port " + port +
+                 ". Endpoints: GET /metrics  GET /health");
     }
 
     /** Shuts down the HTTP server gracefully. */

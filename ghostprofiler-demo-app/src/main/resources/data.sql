@@ -1,0 +1,54 @@
+-- Seed data for the GhostProfiler demo app.
+-- 50 orders pre-populated so the N+1 bug fires clearly
+-- (50 orders = 51 queries when getAllOrders() is called).
+
+INSERT INTO orders (customer_name, product, amount) VALUES ('Alice Johnson', 'Laptop Pro 15"', 1299.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Bob Smith', 'Wireless Mouse', 29.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Carol Williams', 'USB-C Hub', 49.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('David Brown', 'Mechanical Keyboard', 149.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Eve Davis', '4K Monitor 27"', 399.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Frank Miller', 'Webcam HD 1080p', 79.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Grace Wilson', 'Headset Noise Cancel', 199.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Hank Moore', 'Desk Lamp LED', 34.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Iris Taylor', 'Ergonomic Chair', 499.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Jack Anderson', 'Standing Desk', 699.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Kate Thomas', 'Laptop Stand', 59.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Liam Jackson', 'SSD 1TB External', 89.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Mia Harris', 'Bluetooth Speaker', 69.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Noah Martin', 'Drawing Tablet', 249.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Olivia Garcia', 'Portable Charger', 39.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Peter Martinez', 'Smart Watch', 299.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Quinn Robinson', 'Gaming Mouse', 59.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Rachel Clark', 'RGB Keyboard', 119.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Sam Rodriguez', 'VR Headset', 349.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Tina Lewis', 'Action Camera', 179.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Ursula Lee', 'Drone Mini', 449.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Victor Walker', 'Fitness Tracker', 99.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Wendy Hall', 'Wireless Earbuds', 129.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Xander Allen', 'Mechanical Pencil Set', 19.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Yara Young', 'Notebook A5', 9.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Zoe Hernandez', 'Coffee Grinder', 44.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Aaron King', 'Air Purifier', 159.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Bella Wright', 'Electric Kettle', 54.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Carlos Lopez', 'Smart Plug 4-Pack', 29.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Diana Hill', 'Ring Light 12"', 39.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Ethan Scott', 'Laser Printer', 179.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Fiona Green', 'Label Maker', 44.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('George Adams', 'Cable Management Kit', 14.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Hannah Baker', 'Monitor Arm', 89.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Ivan Gonzalez', 'HDMI Switch 4K', 24.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Julia Nelson', 'USB-A Hub 7-Port', 29.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Kevin Carter', 'Microphone USB', 99.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Laura Mitchell', 'Green Screen Kit', 69.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Marcus Perez', 'Capture Card 4K', 149.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Nina Roberts', 'Stream Deck Mini', 79.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Oscar Turner', 'Thunderbolt Dock', 199.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Priya Phillips', 'Portable SSD 500GB', 74.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Quincy Campbell', 'Gel Wrist Rest', 12.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Rose Parker', 'Anti-Glare Filter', 19.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Steve Evans', 'Document Scanner', 129.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Tanya Edwards', 'Wireless Charger Pad', 34.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Uma Collins', 'Surge Protector', 24.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Vernon Stewart', 'Desk Organizer Set', 22.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Wanda Sanchez', 'Laptop Cooling Pad', 29.99);
+INSERT INTO orders (customer_name, product, amount) VALUES ('Xavier Morris', 'OLED Desk Monitor', 599.99);

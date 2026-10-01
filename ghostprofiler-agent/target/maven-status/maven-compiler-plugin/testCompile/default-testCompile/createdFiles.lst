@@ -1,9 +1,0 @@
-com\ghostprofiler\agent\collector\NPlusOneDetectorTest.class
-com\ghostprofiler\agent\instrumentation\MethodInterceptorTest.class
-com\ghostprofiler\agent\AgentMainTest.class
-com\ghostprofiler\agent\config\AgentConfigTest.class
-com\ghostprofiler\agent\jvm\GcMonitorTest.class
-com\ghostprofiler\agent\collector\CallTreeNodeTest.class
-com\ghostprofiler\agent\collector\MetricsStoreTest.class
-com\ghostprofiler\agent\server\MetricsJsonSerializerTest.class
-com\ghostprofiler\agent\jvm\MemoryMonitorTest.class

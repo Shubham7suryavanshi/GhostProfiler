@@ -1,1 +1,9 @@
+com\ghostprofiler\bench\jmh_generated\AgentOverheadBenchmark_jmhType_B3.class
+com\ghostprofiler\bench\jmh_generated\AgentOverheadBenchmark_withInstrumentation_jmhTest.class
+com\ghostprofiler\bench\jmh_generated\AgentOverheadBenchmark_jmhType.class
+META-INF\BenchmarkList
+com\ghostprofiler\bench\jmh_generated\AgentOverheadBenchmark_baseline_jmhTest.class
 com\ghostprofiler\bench\AgentOverheadBenchmark.class
+META-INF\CompilerHints
+com\ghostprofiler\bench\jmh_generated\AgentOverheadBenchmark_jmhType_B1.class
+com\ghostprofiler\bench\jmh_generated\AgentOverheadBenchmark_jmhType_B2.class
