@@ -1,104 +1,56 @@
-# GhostProfiler — Architecture Decisions
+# GhostProfiler Architecture & N+1 Detection
 
-> **Status:** Living document. Updated at the end of each Build Order phase.
+GhostProfiler is a Java Application Performance Monitoring (APM) tool implemented as a `-javaagent`. It intercepts application execution at the JVM level to collect runtime metrics with extremely low overhead.
 
----
+## High-Level Architecture
 
-## 1. Why ByteBuddy over Raw ASM or Javassist
+GhostProfiler is composed of several independent subsystems working in tandem:
 
-| Criterion | Raw ASM | Javassist | **ByteBuddy** |
-|---|---|---|---|
-| API level | Visitor-pattern bytecode | Source-level string templates | Fluent, type-safe DSL |
-| Type safety | None — wrong opcode = corrupt class | Low — string splicing | High — compile-time checked |
-| Java version support | Manual — every new bytecode version needs updates | Lags behind | Maintained by project lead (Rafael Winterhalter), tracks every Java release |
-| ClassLoader handling | Manual | Manual | Automatic (handles bootstrap, ext, app loaders) |
-| Advice inlining | Manual | No | Yes — `@Advice` copies bytecode at the call site, zero reflection overhead |
-| Documentation | JVM spec + OSS reading | Sparse | Comprehensive + active Stack Overflow presence |
+1.  **Agent Initialization (`AgentMain` & `AgentConfig`)**
+    When the JVM starts, it invokes the agent's `premain` method. The agent parses its configuration (from the `-javaagent` argument string and system properties) and wires together the monitoring subsystems.
 
-**Decision:** ByteBuddy's `@Advice` mechanism is the key reason for this choice.
-`@Advice.OnMethodEnter` / `@Advice.OnMethodExit` work by **copying the static method body
-directly into the target method's bytecode** at transformation time. The result is:
+2.  **Bytecode Instrumentation (`MethodTimingTransformer`)**
+    Using the **ByteBuddy** library, GhostProfiler registers an `AgentBuilder` that intercepts class loading. 
+    It applies two transformations:
+    *   **Method Interceptor**: Matches all non-abstract methods in configured packages (e.g. `com.example.*`) and injects `@Advice` to track method entry and exit.
+    *   **JDBC Interceptor**: Matches any class implementing `java.sql.Statement` (or extending it) and intercepts `execute*` methods taking a SQL string as an argument.
 
-- No method call overhead (no `invokevirtual` to an interceptor object)
-- No reflection
-- No proxy objects on the heap
+3.  **Metrics Storage (`MetricsStore` & `MethodStats`)**
+    The heart of the agent is a highly concurrent data structure.
+    *   `ThreadLocal` `ArrayDeque` tracks the call stack of instrumented methods per thread.
+    *   `ConcurrentHashMap` stores aggregated statistics per method signature.
+    *   `LongAdder` is used to accumulate execution time without causing contention between threads.
 
-This is the correct design choice for an APM agent where overhead budget is 5–10% (NFR1).
+4.  **JVM Monitoring (`MemoryMonitor` & `GcMonitor`)**
+    Background daemon threads use `java.lang.management` MXBeans to periodically poll heap usage, non-heap usage, and Garbage Collection pause times.
 
----
+5.  **Metrics Export (`MetricsHttpServer`)**
+    An embedded, lightweight `com.sun.net.httpserver` serves the aggregated metrics as a JSON payload at `http://localhost:9090/metrics`.
 
-## 2. `premain` vs `agentmain` Trade-off
+## N+1 Query Detection Mechanics
 
-The JVM spec defines two agent attach modes:
+The N+1 query problem occurs when an application executes a single query to fetch a list of entities (the "1"), and then sequentially executes another query for *each* entity in the list (the "N") to fetch related data.
 
-| Mode | Trigger | When classes are instrumented |
-|---|---|---|
-| `premain(String, Instrumentation)` | `-javaagent` at JVM startup | Before `main()` runs — all classes not yet loaded |
-| `agentmain(String, Instrumentation)` | Attach API at runtime | After JVM is running — classes may already be loaded |
+GhostProfiler detects this pattern purely at the JDBC layer, without any knowledge of the ORM (Hibernate, JPA, etc.) being used.
 
-**Why both are implemented:**
+### 1. Interception
+ByteBuddy injects `JdbcInterceptor` into the `execute` methods of `java.sql.Statement`. When a query is executed, the SQL string is passed to `MetricsStore.recordQuery()`.
 
-- `premain` is the primary mode (FR1 requires `-javaagent` support). Because the agent
-  attaches before any application class is loaded, ByteBuddy can intercept every class
-  as it is loaded — no retransformation needed.
+### 2. SQL Normalization
+The `NPlusOneDetector` normalizes the SQL string to group identical structural queries together.
+*   It replaces string literals (e.g., `'Alice'`) with `?`.
+*   It replaces numeric literals (e.g., `123`, `45.6`) with `?`.
+*   It collapses multiple whitespace characters into a single space and trims the string.
+*   It converts the SQL to lowercase.
 
-- `agentmain` is provided as a convenience for production attach-after-startup scenarios.
-  It requires `Can-Retransform-Classes: true` in the MANIFEST (already set) and calls
-  `Instrumentation.retransformClasses()` to re-instrument already-loaded classes.
+For example, `SELECT * FROM users WHERE id = 1` and `SELECT * FROM users WHERE id = 2` both normalize to `select * from users where id = ?`.
 
-**Infinite instrumentation loop prevention:** ByteBuddy automatically ignores the
-agent's own classes (the `com.ghostprofiler` shaded prefix). We additionally call
-`.ignore(nameStartsWith("com.ghostprofiler"))` on the `AgentBuilder` so the agent
-never attempts to instrument itself.
+### 3. Sliding Window Tracking
+The detector maintains a `ConcurrentHashMap<String, List<Long>>`, where the key is the normalized SQL and the value is a list of timestamps when the query was executed.
 
----
+When a query is recorded:
+1.  Its timestamp is added to the list for that normalized SQL.
+2.  The sliding window logic removes any timestamps older than the configured `windowMs` (e.g., 1000ms).
+3.  If the number of remaining timestamps in the list meets or exceeds the `threshold` (e.g., 5), an **N+1 Warning** is emitted and the window for that query is reset (to prevent warning spam).
 
-## 3. Class-Loading Safety
-
-The agent jar is a fat/shaded jar with all dependencies relocated under
-`com.ghostprofiler.shaded.*`. This prevents conflicts when the target application
-bundles its own version of ByteBuddy or Jackson.
-
-The agent classes are loaded by the **bootstrap classloader** (via
-`Instrumentation.appendToBootstrapClassLoaderSearch`), which sits above the
-application classloader. This means:
-
-- Application code can see agent classes
-- Agent classes cannot accidentally import application classes (preventing cycles)
-
----
-
-## 4. Overhead Measurement Strategy (NFR1)
-
-Two-pronged approach:
-
-1. **Micro-benchmark (JMH):** `AgentOverheadBenchmark` measures the raw nanosecond cost
-   of the `@Advice` enter/exit pair on a synthetic method. This isolates the instrumentation
-   overhead from application logic.
-
-2. **Macro-benchmark (demo app):** The Spring Boot demo app's `/orders` endpoint is hit
-   under load with and without the `-javaagent` flag. Wall-clock `p99` latency is compared.
-
-Results recorded in `docs/results.md` after step 9.
-
----
-
-## 5. N+1 Detection Algorithm
-
-_(Filled in during step 6)_
-
----
-
-## 6. Thread Safety Model
-
-| Component | Concurrency mechanism |
-|---|---|
-| `MetricsStore.methodStats` | `ConcurrentHashMap` + `AtomicLong.addAndGet` |
-| `MetricsStore.completedTrees` | `CopyOnWriteArrayList` (reads never block writers) |
-| `MetricsStore.callStack` | `ThreadLocal<Deque>` (zero contention — per-thread) |
-| `MemoryMonitor` / `GcMonitor` | `volatile` long fields (single-writer daemon thread) |
-| `MetricsHttpServer` | Single reader thread; reads only immutable snapshots |
-
----
-
-*Last updated: Phase 1 — Scaffold*
+This approach reliably catches N+1 bursts in real-time, regardless of the thread or transaction context they originate from, while automatically cleaning up old data to prevent memory leaks.
